@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LSTM</title>
+    <script src="./data.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f7ff;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: auto;
+        background: white;
+        border-radius: 16px;
+        padding: 36px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      h1 {
+        font-size: 30px;
+        margin-bottom: 15px;
+      }
+
+      .definition {
+        font-size: 18px;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        color: #333;
+      }
+
+      .section-title {
+        margin-top: 20px;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .sources,
+      .related {
+        padding-left: 18px;
+        margin-top: 8px;
+      }
+
+      .related a {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #eef1ff;
+        text-decoration: none;
+        color: #3c57d0;
+      }
+
+      .back-btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 14px;
+        border-radius: 6px;
+        background: #dfe3fb;
+        text-decoration: none;
+        color: #2e3ea8;
+        transition: 0.2s;
+      }
+
+      .back-btn:hover {
+        background: #cdd2fa;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1 id="term-title">...</h1>
+
+      <div id="definition" class="definition">...</div>
+
+      <div class="section-title">Источники</div>
+      <ul id="sources" class="sources"></ul>
+
+      <div class="section-title">Связанные термины</div>
+      <div id="related" class="related"></div>
+
+      <a href="./index.html" class="back-btn">← Назад к графу</a>
+    </div>
+
+    <script>
+      const file = window.location.pathname.split("/").pop();
+      const id = Number(file.replace("term-", "").replace(".html", ""));
+
+      const term = window.GLOSSARY_TERMS.find((t) => t.id === id);
+
+      document.getElementById("term-title").textContent = term.term;
+      document.getElementById("definition").textContent = term.definition;
+
+      const srcList = document.getElementById("sources");
+      (term.sources || []).forEach((s) => {
+        srcList.innerHTML += `<li>${s}</li>`;
+      });
+
+      const relatedDiv = document.getElementById("related");
+      (term.related_terms || []).forEach((rid) => {
+        const rt = window.GLOSSARY_TERMS.find((t) => t.id === rid);
+        if (rt) {
+          relatedDiv.innerHTML += `<a href="./term-${rt.id}.html">${rt.term}</a>`;
+        }
+      });
+    </script>
+  </body>
+</html>
