@@ -102,9 +102,6 @@
         accurateTrackBounce: true,
         trackLinks: true,
       });
-      if (window.yaParams && window.yaParams.ab_test) {
-        ym(105738532, "params", { ab_test: window.yaParams.ab_test });
-      }
     </script>
     <noscript
       ><div>
@@ -141,7 +138,7 @@
         variant = Math.random() < 0.5 ? "A" : "B";
         localStorage.setItem("tooltip_variant", variant);
       }
-      window.yaParams = { ab_test: variant };
+      ym(105738532, 'reachGoal', 'some_goal', {ab_test: variant,});
 
       const graph = window.GLOSSARY_GRAPH;
 
