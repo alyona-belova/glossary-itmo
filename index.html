@@ -140,25 +140,13 @@
       }
       ym(105738532, "reachGoal", "some_goal", { ab_test: variant });
 
-      function loadD3(callback) {
-        if (window.d3) {
-          callback();
-          return;
-        }
-
-        const script = document.createElement("script");
-        script.src = "https://d3js.org/d3.v7.min.js";
-        script.async = true;
-        script.onload = () => {
-          callback();
-        };
-        document.body.appendChild(script);
-      }
-
       if (variant === "A") {
         renderStaticGraph();
       } else {
-        loadD3(renderInteractiveGraph);
+        const s = document.createElement("script");
+        s.src = "./d3.min.js";
+        s.onload = renderInteractiveGraph;
+        document.head.appendChild(s);
       }
 
       function renderStaticGraph() {
@@ -174,18 +162,26 @@
         const options = {
           physics: false,
           interaction: {
+            dragNodes: false,
+            dragView: false,
+            zoomView: false,
             hover: false,
           },
           nodes: {
             shape: "dot",
             size: 25,
-            font: { color: "#000" },
+            font: {
+              color: "#000",
+              size: 14,
+              face: "system-ui",
+            },
             color: {
               background: "#5C7FFF",
             },
           },
           edges: {
             color: "#ccc",
+            smooth: false,
           },
         };
 
@@ -218,6 +214,11 @@
           target: e.to,
         }));
 
+        nodes.forEach((d) => {
+          d.x = width / 2 + Math.random() * 50;
+          d.y = height / 2 + Math.random() * 50;
+        });
+
         const simulation = d3
           .forceSimulation(nodes)
           .force(
@@ -230,9 +231,9 @@
           .force("charge", d3.forceManyBody().strength(-430))
           .force("collision", d3.forceCollide(55))
           .force("center", d3.forceCenter(width / 2, height / 2))
-          .alphaDecay(0.06);
+          .alphaDecay(0.15);
 
-        setTimeout(() => simulation.stop(), 2000);
+        setTimeout(() => simulation.stop(), 800);
 
         const link = svg
           .append("g")
