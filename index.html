@@ -133,56 +133,214 @@
         list.appendChild(div);
       });
 
-      let variant = localStorage.getItem("tooltip_variant");
+      let variant = localStorage.getItem("graph_variant");
       if (!variant) {
         variant = Math.random() < 0.5 ? "A" : "B";
-        localStorage.setItem("tooltip_variant", variant);
+        localStorage.setItem("graph_variant", variant);
       }
-      ym(105738532, 'reachGoal', 'some_goal', {ab_test: variant,});
+      ym(105738532, "reachGoal", "some_goal", { ab_test: variant });
+      console.log(variant);
 
-      const graph = window.GLOSSARY_GRAPH;
-
-      const nodesData = window.GLOSSARY_TERMS.map((t) => ({
-        id: t.id,
-        label: t.term,
-        title: variant === "A" ? t.tooltip : undefined,
-      }));
-
-      const nodes = new vis.DataSet(nodesData);
-      const edges = new vis.DataSet(graph.edges);
-      const container = document.getElementById("mynetwork");
-
-      const options = {
-        physics: {
-          enabled: true,
-          stabilization: { iterations: 150 },
-          solver: "forceAtlas2Based",
-        },
-        nodes: {
-          shape: "dot",
-          size: 16,
-          borderWidth: 1,
-          color: {
-            background: "#5b7fff",
-            border: "#3b5ade",
-            highlight: "#6d8cff",
-          },
-          font: { color: "#000000", size: 14, face: "system-ui" },
-        },
-        edges: {
-          color: { color: "#bbb" },
-          smooth: false,
-        },
-      };
-
-      const network = new vis.Network(container, { nodes, edges }, options);
-
-      network.on("click", function (params) {
-        if (params.nodes.length > 0) {
-          const id = params.nodes[0];
-          window.location.href = `./term-${id}.html`;
+      function loadD3(callback) {
+        if (window.d3) {
+          callback();
+          return;
         }
-      });
+
+        const script = document.createElement("script");
+        script.src = "https://d3js.org/d3.v7.min.js";
+        script.async = true;
+        script.onload = () => {
+          console.log("D3 loaded");
+          callback();
+        };
+        document.body.appendChild(script);
+      }
+
+      if (variant === "A") {
+        renderStaticGraph();
+      } else {
+        loadD3(renderInteractiveGraph);
+      }
+
+      function renderStaticGraph() {
+        const nodes = new vis.DataSet(
+          window.GLOSSARY_TERMS.map((t) => ({
+            id: t.id,
+            label: t.term,
+          }))
+        );
+
+        const edges = new vis.DataSet(window.GLOSSARY_GRAPH.edges);
+
+        const options = {
+          physics: false,
+          interaction: {
+            hover: false,
+          },
+          nodes: {
+            shape: "dot",
+            size: 25,
+            font: { color: "#000" },
+            color: {
+              background: "#5C7FFF",
+            },
+          },
+          edges: {
+            color: "#ccc",
+          },
+        };
+
+        const network = new vis.Network(
+          document.getElementById("mynetwork"),
+          { nodes, edges },
+          options
+        );
+
+        network.on("click", (params) => {
+          if (params.nodes.length) {
+            window.location.href = `./term-${params.nodes[0]}.html`;
+          }
+        });
+      }
+
+      function renderInteractiveGraph() {
+        const width = document.getElementById("mynetwork").clientWidth;
+        const height = document.getElementById("mynetwork").clientHeight;
+
+        const svg = d3
+          .select("#mynetwork")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+        const nodes = window.GLOSSARY_TERMS.map((t) => ({ ...t }));
+        const links = window.GLOSSARY_GRAPH.edges.map((e) => ({
+          source: e.from,
+          target: e.to,
+        }));
+
+        const simulation = d3
+          .forceSimulation(nodes)
+          .force(
+            "link",
+            d3
+              .forceLink(links)
+              .id((d) => d.id)
+              .distance(120)
+          )
+          .force("charge", d3.forceManyBody().strength(-430))
+          .force("collision", d3.forceCollide(55))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .alphaDecay(0.06);
+
+        setTimeout(() => simulation.stop(), 2000);
+
+        const link = svg
+          .append("g")
+          .selectAll("line")
+          .data(links)
+          .enter()
+          .append("line")
+          .attr("stroke", "#aaa");
+
+        const node = svg
+          .append("g")
+          .selectAll("circle")
+          .data(nodes)
+          .enter()
+          .append("circle")
+          .attr("r", 20)
+          .attr("fill", "#5b7fff")
+          .call(
+            d3
+              .drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended)
+          )
+          .on("click", (event, d) => {
+            window.location.href = `./term-${d.id}.html`;
+          });
+
+        const label = svg
+          .append("g")
+          .selectAll("text")
+          .data(nodes)
+          .enter()
+          .append("text")
+          .text((d) => d.term)
+          .attr("text-anchor", "middle")
+          .attr("dy", "-1.9em")
+          .attr("font-size", "12px")
+          .style("font-weight", "500")
+          .attr("fill", "#333")
+          .style("pointer-events", "none")
+          .style("user-select", "none");
+
+        const tooltip = d3
+          .select("body")
+          .append("div")
+          .style("position", "absolute")
+          .style("padding", "8px")
+          .style("background", "rgba(255,255,255,0.9)")
+          .style("border-radius", "6px")
+          .style("box-shadow", "0 4px 12px rgba(0,0,0,0.15)")
+          .style("visibility", "hidden");
+
+        node
+          .on("mouseover", (event, d) => {
+            tooltip.text(d.tooltip).style("visibility", "visible");
+          })
+          .on("mousemove", (event) => {
+            tooltip
+              .style("top", event.pageY + 10 + "px")
+              .style("left", event.pageX + 10 + "px");
+          })
+          .on("mouseout", () => {
+            tooltip.style("visibility", "hidden");
+          });
+
+        const radius = 10;
+        const padding = 20;
+
+        simulation.on("tick", () => {
+          nodes.forEach((d) => {
+            d.x = Math.max(
+              radius + padding,
+              Math.min(width - radius - padding, d.x)
+            );
+            d.y = Math.max(
+              radius + padding,
+              Math.min(height - radius - padding, d.y)
+            );
+          });
+          link
+            .attr("x1", (d) => d.source.x)
+            .attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x)
+            .attr("y2", (d) => d.target.y);
+          node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+          label.attr("x", (d) => d.x).attr("y", (d) => d.y);
+        });
+
+        function dragstarted(event) {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          event.subject.fx = event.subject.x;
+          event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event) {
+          event.subject.fx = event.x;
+          event.subject.fy = event.y;
+        }
+
+        function dragended(event) {
+          if (!event.active) simulation.alphaTarget(0);
+          event.subject.fx = null;
+          event.subject.fy = null;
+        }
+      }
     </script>
   </body>
 </html>
